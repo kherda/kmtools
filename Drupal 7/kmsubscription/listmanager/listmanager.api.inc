@@ -15,7 +15,7 @@ class ListManagerMethods extends ListManager {
 
   /**
    * Constructor.
-   * 
+   *
    * @param string $key
    *   API key
    */
@@ -42,7 +42,6 @@ class ListManagerMethods extends ListManager {
 
     foreach ($list as $val) {
       $options[(int) $val->FolderID] = (string) $val->FolderName;
-
     }
 
     return $options;
@@ -54,7 +53,6 @@ class ListManagerMethods extends ListManager {
   public function kmsuite_add_folder($foldername, $folderdesc, $folderid) {
 
     $output = parent::AddFolderToParent(urlencode($foldername), urlencode($folderdesc), $folderid);
-
     $output = $this->kmsuite_status_message($output);
 
     return $output;
