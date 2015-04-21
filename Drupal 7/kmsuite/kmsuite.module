@@ -1,0 +1,147 @@
+<?php
+
+/**
+ * @file
+ * Knowledge Marketing Module File.
+ */
+
+// Note: This path definition is inherited from plugins.  Do not remove it.
+define('KMSUITE_KM_MENU_PATH', 'admin/config/services/knowledge-marketing');
+
+/**
+ * Defines default excluded pages.
+ */
+define('KMSUITE_KM_EXCLUDED_PAGES',
+'node/add*
+node/*/edit
+node/*/delete
+user
+user/*
+admin
+admin/*
+subscription-management*'
+);
+
+/**
+ * Implements hook_page_build().
+ */
+function kmsuite_page_build() {
+
+  $path = isset($_GET['q']) ? $_GET['q'] : '';
+  $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+
+  if (strlen($presets['config']['token']) < 3) {
+    drupal_set_message(t('Error:  The KM Token is not available.'), 'error', FALSE);
+  }
+
+  // Domain Tracking Injection.
+  if (strlen($presets['domain_tracker']['key']) > 3 && $presets['domain_tracker']['status'] == 1 && drupal_match_path($path, $presets['domain_tracker']['excluded_pages']) != 1) {
+
+    drupal_add_js('
+      var TrackerKey = "' . $presets['domain_tracker']['key'] . '";
+      var url = "http://webservices.ecn5.com/ECN_tracker.js";
+      var script = document.createElement("script");
+      script.setAttribute("src", url);
+      script.setAttribute("type", "text/javascript");
+      document.body.appendChild(script);
+    ', array(
+      'type' => 'inline',
+      'scope' => $presets['domain_tracker']['location'],
+      'weight' => 5,
+    ));
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function kmsuite_menu() {
+
+  $items = array();
+
+  $items[KMSUITE_KM_MENU_PATH] = array(
+    'title' => 'Knowledge Marketing',
+    'description' => 'General configuration settings for the KM Module',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmsuite_config_settings'),
+    'access arguments' => array('access content'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'kmsuite.config.inc',
+  );
+  $items[KMSUITE_KM_MENU_PATH . '/config'] = array(
+    'title' => 'Config',
+    'weight' => 0,
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'file' => 'kmsuite.config.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function kmsuite_block_info() {
+
+  // This example comes from node.module.
+  $blocks['km_term_injection'] = array(
+    'info' => t('Knowledge Marketing Term Injection'),
+    'cache' => DRUPAL_CACHE_PER_PAGE,
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function kmsuite_block_view($delta = '') {
+
+  /* $path = drupal_get_path('module', 'kmsuite'); */
+  $block = array();
+
+  switch ($delta) {
+    case 'km_term_injection':
+
+      $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+      $terms = NULL;
+
+      // Taxonomy Term Injection. Show on node with at least 1 vocab selected.
+      if ($presets['taxonomy_tracker']['status'] == 1 && count($presets['taxonomy_tracker']['vocabularies']) > 0 && arg(0) == 'node' && is_numeric(arg(1))) {
+
+        $excluded_tids = explode(',', $presets['taxonomy_tracker']['tid_exclusion']);
+
+        $sql = db_select('taxonomy_term_data', 'td');
+        $sql->join('taxonomy_index', 'ti', 'ti.tid = td.tid');
+        $sql->addField('td', $presets['taxonomy_tracker']['type'], 'term');
+        $sql->condition('ti.nid', check_plain(arg(1)), '=');
+        $sql->condition('td.vid', $presets['taxonomy_tracker']['vocabularies'], 'IN');
+        $sql->condition('td.tid', $excluded_tids, 'NOT IN');
+        $res = $sql->execute();
+
+        $terms = NULL;
+        foreach ($res as $result) {
+
+          // Remove commas for KM.
+          $term = str_replace(',', '', $result->term);
+          if (!is_numeric($presets['taxonomy_tracker']['case'])) {
+            $terms .= trim($presets['taxonomy_tracker']['prefix'] . $presets['taxonomy_tracker']['case']($term)) . ',';
+          }
+          else {
+            $terms .= trim($presets['taxonomy_tracker']['prefix'] . $term) . ',';
+          }
+        }
+        $terms = rtrim($terms, ',');
+
+        /* drupal_add_css($path . '/css/kmtracking.css', array('cache' => FALSE, 'preprocess' => FALSE)); */
+        // Only show if there is at least one term selected for the node.
+        if (strlen($terms) > 1) {
+          $block['subject'] = t('Knowledge Marketing Term Injection');
+          $block['content'] = '<div class="topicID" >' . $terms . '</div><input type="hidden" class="topicID" id="topicID" value="' . $terms . '">';
+        }
+      }
+
+      break;
+  }
+  return $block;
+}

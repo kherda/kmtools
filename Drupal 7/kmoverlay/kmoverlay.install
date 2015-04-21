@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function kmoverlay_install() {
+
+  $presets = json_decode(variable_get('kmsuite_object'), true);
+  $presets['overlay_plugin'] = NULL;
+
+  variable_set('kmsuite_object', json_encode($presets));
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function kmoverlay_uninstall() {
+
+  $presets = json_decode(variable_get('kmsuite_object'), true);
+  unset($presets['overlay_plugin']);
+
+  variable_set('kmsuite_object', json_encode($presets));
+  variable_del('kmsubscription_block_settings');
+}

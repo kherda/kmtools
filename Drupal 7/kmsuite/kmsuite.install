@@ -1,0 +1,49 @@
+<?php
+
+/**
+ * @file
+ * Knowledge Marketing Install File.
+ */
+
+/**
+ * Implements hook_requirements().
+ *
+ * @todo ensure there is a library version check against the KMSuite.
+ */
+function kmsuite_requirements($phase) {
+  $requirements = array();
+  if ($phase == 'runtime') {
+
+    // Ensure translations do not break at install time.
+    $t = get_t();
+    $requirements['kmsuite']['title'] = $t('Knowledge Marketing library');
+    if (module_exists('libraries') && function_exists('libraries_get_libraries')) {
+      $library = libraries_get_libraries();
+      $kmsuite_installed = (isset($library['kmsuite'])) ? TRUE : FALSE;
+    }
+    elseif (is_dir('sites/all/libraries/kmsuite/')) {
+      $kmsuite_installed = TRUE;
+    }
+    else {
+      $kmsuite_installed = FALSE;
+    }
+    if ($kmsuite_installed) {
+      $requirements['kmsuite']['value'] = $t('Installed');
+      $requirements['kmsuite']['severity'] = REQUIREMENT_OK;
+    }
+    else {
+      $requirements['kmsuite']['value'] = $t('Not installed');
+      $requirements['kmsuite']['severity'] = REQUIREMENT_ERROR;
+      $requirements['kmsuite']['description'] = $t('Error:  Please download the KM Suite from !link.', array('!link' => l($t('https://github.com/kherda/kmsuite'), 'https://github.com/kherda/kmsuite')));
+    }
+  }
+  return $requirements;
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function kmsuite_uninstall() {
+
+  variable_del('kmsuite_object');
+}

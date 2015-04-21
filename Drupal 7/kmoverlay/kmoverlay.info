@@ -1,0 +1,8 @@
+name = KM Subscription Overlay
+description = "The Overlay plugin will provide a customizable overlay which presents a subscription form to new visitors."
+core = 7.x
+package = Knowledge Marketing
+dependencies[] = kmsuite
+dependencies[] = kmsubscription
+
+configure = admin/config/services/knowledge-marketing/overlay

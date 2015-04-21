@@ -1,0 +1,8 @@
+name = KM Subscription Management
+description = "This plugin will manage all Subscription possibilities with the Knowledge Marketing Suite."
+core = 7.x
+package = Knowledge Marketing
+dependencies[] = kmsuite
+dependencies[] = ctools
+
+configure = admin/config/services/knowledge-marketing/groups

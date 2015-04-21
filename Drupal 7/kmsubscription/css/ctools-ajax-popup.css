@@ -1,0 +1,7 @@
+div.ctools-modal-content{
+  width: 500px;
+  height: 500px
+}
+div.ctools-modal-content #modal-content{
+  width: 490px;
+}

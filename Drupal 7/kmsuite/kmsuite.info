@@ -1,0 +1,8 @@
+name = Knowledge Marketing Suite
+description = "This is an API suite intended to allow communication with your site and Knowledge Marketing."
+core = 7.x
+package = Knowledge Marketing
+dependencies[] = taxonomy
+dependencies[] = libraries
+
+configure = admin/config/services/knowledge-marketing

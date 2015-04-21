@@ -1,0 +1,27 @@
+/*.overlay_copy {
+  margin:0 10px 0 0;
+}
+
+.popups-body input.form-text {
+  width: 250px;
+}
+
+#modalContent div.ctools-modal-content{
+  border-radius: 5px;
+  -moz-border-radius: 5px;
+  -webkit-border-radius: 5px;
+  border: 0px solid;
+}
+#modalContent div.messages{margin: 0 0 10px}
+#modalContent div#messages{margin: 0 0 10px; padding: 0}
+
+#modalContent .popups-body{min-height: 200px;}
+div.ctools-modal-content .modal-header{padding: 10px 10px 5px; background-color: #ffc20e !important;}
+div.ctools-modal-content .modal-content{padding: 0 !important; overflow: hidden !important;}
+*/
+
+.popups-title .popups-close {
+  float: right;
+  margin: 5px 5px 0 0;
+  cursor: pointer;
+}

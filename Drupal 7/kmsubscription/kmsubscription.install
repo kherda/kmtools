@@ -1,0 +1,91 @@
+<?php
+
+/**
+ * @file
+ * Knowledge Marketing Subscription Install.
+ */
+
+/**
+ * Implements of hook_schema().
+ */
+function kmsubscription_schema() {
+  $schema['kmsubscription_data'] = array(
+    'description' => 'Table to hold all the KM subscripber actions.',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Primary Key',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'group_id' => array(
+        'description' => 'The group (list) they signed up for.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'Time of the signup.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'form' => array(
+        'description' => 'Which form has the action taken place on.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+        'not null' => TRUE,
+      ),
+      'email' => array(
+        'description' => 'Subscriber email',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+        'not null' => TRUE,
+      ),
+      'apiresponse' => array(
+        'description' => 'API Response',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+        'not null' => TRUE,
+      ),
+      'action' => array(
+        'description' => 'What are they doing? Signing up, unsubscribing, etc.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function kmsubscription_install() {
+
+  $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+  $presets['subscription_plugin'] = NULL;
+
+  variable_set('kmsuite_object', json_encode($presets));
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function kmsubscription_uninstall() {
+
+  $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+  unset($presets['subscription_plugin']);
+
+  variable_set('kmsuite_object', json_encode($presets));
+  variable_del('kmsubscription_block_settings');
+}

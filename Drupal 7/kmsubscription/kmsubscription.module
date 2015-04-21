@@ -1,0 +1,810 @@
+<?php
+
+/**
+ * @file
+ * Knowledge Marketing Subscription Module File.
+ *
+ * NOTE:  The KMSUITE_KM_MENU_PATH is inherited from the suite.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function kmsubscription_menu() {
+
+  $items = array();
+
+  $items[KMSUITE_KM_MENU_PATH . '/management'] = array(
+    'title' => 'Group Management',
+    'description' => 'Subscription List Configuration settings for the Knowledge Marketing Suite.',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 1,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmsuite_group_selection'),
+    'access arguments' => array('access content'),
+    'file' => 'kmsubscription_config_group.inc',
+  );
+
+  $items[KMSUITE_KM_MENU_PATH . '/page'] = array(
+    'title' => 'KM Page Settings',
+    'description' => 'Page Setting.',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmsuite_group_settings_page'),
+    'access arguments' => array('access content'),
+    'file' => 'kmsubscription_config_page.inc',
+  );
+
+  $items[KMSUITE_KM_MENU_PATH . '/management/groups'] = array(
+    'title' => 'STEP 1: KM Group Selection',
+    'description' => 'Group Selection',
+    'type' => MENU_LOCAL_TASK | MENU_DEFAULT_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmsuite_group_selection'),
+    'access arguments' => array('access content'),
+    'file' => 'kmsubscription_config_group.inc',
+  );
+
+  $items[KMSUITE_KM_MENU_PATH . '/management/settings'] = array(
+    'title' => 'STEP 2: KM Group Settings',
+    'description' => 'Subscription List Configuration settings for the Knowledge Marketing Suite.',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 1,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmsuite_group_settings'),
+    'access arguments' => array('access content'),
+    'file' => 'kmsubscription_config_group.inc',
+  );
+
+  $items['subscription-management'] = array(
+    'title' => 'Subscription Management',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmsubscription_management_page', 1),
+    'access arguments' => array('access content'),
+  );
+
+  $items['admin/reports/kmsubscription'] = array(
+    'title' => 'KMSuite - Recent Logs',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmsubscription_recent_logs'),
+    'access arguments' => array('access content'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'kmsubscription_logs.inc',
+  );
+
+  $items[KMSUITE_KM_MENU_PATH . '/management/fields'] = array(
+    'title' => 'Fields',
+    'description' => 'KM Field Management',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmsubscription_field_settings'),
+    'access arguments' => array('access content'),
+    'file' => 'kmsubscription_config_field.inc',
+    'type' => MENU_LOCAL_TASK | MENU_NORMAL_ITEM,
+  );
+
+  $items[KMSUITE_KM_MENU_PATH . '/management/folder/add'] = array(
+    'title' => 'Add Folder',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmsuite_addfolder_form'),
+    'type' => MENU_LOCAL_TASK | MENU_NORMAL_ITEM,
+    'access arguments' => array('access content'),
+    'file' => 'listmanager/folder.pages.inc',
+  );
+
+  $items[KMSUITE_KM_MENU_PATH . '/management/folder/delete'] = array(
+    'title' => 'Delete Folder',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmsuite_deletefolder_form'),
+    'type' => MENU_LOCAL_TASK | MENU_NORMAL_ITEM,
+    'access arguments' => array('access content'),
+    'file' => 'listmanager/folder.pages.inc',
+  );
+
+  $items[KMSUITE_KM_MENU_PATH . '/management/lists/add'] = array(
+    'title' => 'Add Group',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmsuite_addgroup_form'),
+    'type' => MENU_LOCAL_TASK | MENU_NORMAL_ITEM,
+    'access arguments' => array('access content'),
+    'file' => 'listmanager/group.pages.inc',
+    'weight' => -5,
+  );
+
+  $items[KMSUITE_KM_MENU_PATH . '/management/lists/delete'] = array(
+    'title' => 'Delete Group',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmsuite_deletegroup_form'),
+    'type' => MENU_LOCAL_TASK | MENU_NORMAL_ITEM,
+    'access arguments' => array('access content'),
+    'file' => 'listmanager/group.pages.inc',
+    'weight' => -4,
+  );
+
+  return $items;
+}
+
+/**
+ * KM Subscription Page.
+ *
+ * This page will serve as a landing page with dynamic options to show
+ * current groups the subscriber is tied too!
+ */
+function kmsubscription_management_page($form, &$form_state, $vars) {
+
+  require_once 'listmanager/listmanager.api.inc';
+
+  $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+  $settings = $presets['subscription_plugin']['page'];
+
+  $default_groups = array();
+
+  $profile_arr = array();
+
+  $lm = new ListManagerMethods($presets['config']['token']);
+
+  if (isset($_GET['email'])) {
+
+    $email = base64_decode($_GET['email']);
+
+    $default_groups = $lm->kmsuite_subscriber_status($email);
+
+    foreach ($default_groups as $k => $v) {
+
+      if (array_key_exists($v, $presets['subscription_plugin']['page']['groups'])) {
+
+        $profile = $lm->kmsuite_subscriber_profile($v, $email);
+
+        if (is_object($profile[0])) {
+
+          $profile = $profile[0];
+          $profile_arr[0] = $profile->EmailAddress;
+
+          break;
+        }
+      }
+    }
+  }
+
+  if (isset($settings['fields']) && (count($settings['fields']) >= 1) && (isset($presets['subscription_plugin']['groups']) && $presets['subscription_plugin']['groups'] >= 1)) {
+
+    $form['desc'] = array(
+      '#markup' => $settings['page_desc']['value'],
+    );
+
+    // Sort accordingly.
+    uasort($settings['fields'], 'array_uasort');
+
+    $form['#attached']['css'] = array(
+      drupal_get_path('module', 'kmsubscription') . '/css/form.css',
+    );
+
+    uasort($settings['groups'], 'array_uasort');
+
+    $options = array();
+
+    $visibility = $settings['visibility'];
+
+    foreach ($settings['groups'] as $k => $v) {
+
+      if ($v['enabled'] == 1) {
+
+        strlen($presets['subscription_plugin']['groups'][$k]['alias']) > 3 ? $title = $presets['subscription_plugin']['groups'][$k]['alias'] : $title = $presets['subscription_plugin']['groups'][$k]['origname'];
+
+        $frequency = isset($presets['subscription_plugin']['groups'][$k]['frequency']) ? $presets['subscription_plugin']['groups'][$k]['frequency'] : 'Daily';
+        $desc = $presets['subscription_plugin']['groups'][$k]['desc'];
+
+        if ($visibility == 0) {
+
+          $options[$k] = array(
+            'data' => '<div class="km-subsctiption-title">' . $title . ' - <span class="km-subsctiption-frequency">' . $frequency . '</span></div><div class="km-subsctiption-desc">' . $desc . '</div>',
+          );
+
+          $header = array(
+            'data' => t('Newsletters'),
+          );
+
+          $uids = drupal_map_assoc($default_groups);
+
+          $form['lists'] = array(
+            '#type' => 'tableselect',
+            '#header' => $header,
+            '#options' => $options,
+            '#empty' => t('No lists found'),
+            '#default_value' => $uids,
+          );
+        }
+
+      }
+    }
+
+    foreach ($settings['fields'] as $k => $v) {
+
+      $lookup = $presets['subscription_plugin']['fields']['kmsubscription_saved_fields']['fields'][$k];
+      $key = $presets['subscription_plugin']['fields']['kmsubscription_fields'][$lookup];
+
+      if ($v['enabled'] == 1) {
+        $form['km_custom_' . $key] = array(
+          '#type' => 'textfield',
+          '#title' => t($presets['subscription_plugin']['fields']['kmsubscription_saved_fields']['names'][$k]),
+          '#required' => $v['required'] == 1 ? TRUE : FALSE,
+          '#default_value' => isset($profile_arr[$k]) ? $profile_arr[$k] : '',
+        );
+      }
+    }
+
+    $form['subscribe-submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Subscribe'),
+      '#submit' => array('kmsubscription_management_page_submit'),
+    );
+
+    $form['unsubscribe-submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Unsubscribe'),
+      '#submit' => array('kmsubscription_management_page_submit'),
+    );
+
+  }
+  else {
+
+    $form['actions']['cancel'] = array(
+      '#markup' => t('<p>Please configure the subscription page <a href="admin/config/services/knowledge-marketing/page" target="_blank">here</a>. </p><p>You must have at least 1 group selected and 1 field selected.</p>'),
+    );
+
+  }
+
+  return $form;
+}
+
+
+/**
+ * Submit Handler for the custom form.
+ */
+function kmsubscription_management_page_submit($form, $form_state) {
+
+  $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+
+  $values = $form_state['values'];
+
+  $kmtoken = $presets['config']['token'];
+
+  $lm = new ListManagerMethods($kmtoken);
+
+  $groups = array();
+  $email = NULL;
+  $data = array();
+  $xml_str = '<Emails>';
+
+  // We displayed the lists for selection.
+  foreach ($form_state['values'] as $k => $v) {
+    if (stristr($k, 'km_custom_')) {
+
+      $field = str_replace('km_custom_', '', $k);
+      $xml_str .= '<' . $field . '>' . $v . '</' . $field . '>';
+
+      if (stristr($field, 'emailaddress')) {
+        $email = $v;
+      }
+
+      $data[$field] = $v;
+    }
+  }
+  $xml_str .= '</Emails>';
+
+  foreach ($values['lists'] as $k => $group) {
+
+    if ((int) $group > 0 && ($values['op'] == 'Subscribe')) {
+      $output = $lm->kmsuite_add_subscriber($k, 'S', 'html', $xml_str);
+      kmsubscription_record_transaction($k, 'Page', 'Subscribed', $output, $email);
+    }
+
+    if ((int) $group > 0 && ($values['op'] == 'Unsubscribe')) {
+
+      $output = $lm->kmsuite_subscriber_delete($k, $email);
+
+      kmsubscription_record_transaction($k, 'Page', 'UnSubscribed', $output, $email);
+    }
+  }
+
+  drupal_set_message(t($presets['subscription_plugin']['page']['success_msg']), 'status', FALSE);
+  drupal_goto('subscription-management', array('query' => array('email' => base64_encode($email))));
+}
+
+
+/**
+ * Implements hook_block_info().
+ */
+function kmsubscription_block_info() {
+
+  // This example comes from node.module.
+  $blocks['km_subscription_block'] = array(
+    'info' => t('Knowledge Marketing Subscription Block'),
+    'cache' => DRUPAL_CACHE_GLOBAL,
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function kmsubscription_block_view($delta = '') {
+
+  $block = array();
+
+  switch ($delta) {
+    case 'km_subscription_block':
+
+      $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+      $settings = $presets['subscription_plugin']['block'];
+
+      $form = drupal_get_form('kmsubscription_block_form', $presets, $settings);
+
+      $output = $settings['formatting']['value'];
+      $output .= render($form);
+
+      $block['subject'] = t('Knowledge Marketing Subscription Block');
+      $block['content'] = $output;
+      break;
+  }
+  return $block;
+}
+
+/**
+ * Implements hook_block_configure().
+ */
+function kmsubscription_block_configure($delta = '') {
+
+  $form = array();
+
+  $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+  $settings = $presets['subscription_plugin']['block'];
+
+  if ($delta == 'km_subscription_block') {
+
+    // The Group Selection Block.
+    $form = array();
+    $rows = array();
+    $row_elements = array();
+
+    $form['formatting'] = array(
+      '#type' => 'text_format',
+      '#title' => t('Description'),
+      '#default_value' => isset($settings['formatting']['value']) ? $settings['formatting']['value'] : NULL,
+      '#format' => isset($settings['formatting']['format']) ? $settings['formatting']['format'] : 'full_html',
+    );
+
+    $form['data_table'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Group Selection'),
+      '#description' => t('You can choose and order the groups available for use in this block.  Note:  If an Alias is available, it will be used instead of the title, otherwise the default title will be used.'),
+    );
+
+    $data = array();
+
+    if (isset($presets['subscription_plugin']['groups'])) {
+      foreach ($presets['subscription_plugin']['groups'] as $k => $v) {
+
+        $data[$k] = array(
+          'enabled' => isset($settings['groups'][$k]['enabled']) ? $settings['groups'][$k]['enabled'] : FALSE,
+          'weight' => isset($settings['groups'][$k]['weight']) ? $settings['groups'][$k]['weight'] : 0,
+          'name' => $v['origname'],
+          'alias' => $v['alias'],
+        );
+      }
+
+      // Sort the rows.
+      uasort($data, 'array_uasort');
+      $group_table_data = _build_dragtable_help($data, 'data_table', array('enabled'));
+
+      // Add the table to the form.
+      $form['data_table']['table'] = array(
+        '#theme' => 'table',
+        // The row form elements need to be processed and build,
+        // therefore pass them as element children.
+        'elements' => $group_table_data['row_elements'],
+        '#header' => array(
+          // We need two empty columns for the weigth field and the cross.
+          array('data' => NULL, 'colspan' => 2),
+          t('Enabled'),
+          t('Name'),
+          t('Alias'),
+        ),
+        '#rows' => $group_table_data['rows'],
+        '#empty' => t('There are no groups available.'),
+        '#attributes' => array('id' => 'entry-order'),
+      );
+      drupal_add_tabledrag('entry-order', 'order', 'sibling', 'entry-order-weight');
+    }
+
+    /* /Group Selection */
+
+    /* Fields Selection */
+
+    $form['field_table'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Field Selection'),
+      '#description' => t('Optional fields are coming from the Field tab in the Subscription plugin.'),
+    );
+
+    $data1 = array();
+    if (isset($presets['subscription_plugin']['groups'])) {
+      foreach ($presets['subscription_plugin']['fields']['kmsubscription_saved_fields']['fields'] as $k => $v) {
+
+        $data1[$k] = array(
+          'enabled' => isset($settings['fields'][$k]['enabled']) ? $settings['fields'][$k]['enabled'] : FALSE,
+          'required' => isset($settings['fields'][$k]['required']) ? $settings['fields'][$k]['required'] : FALSE,
+          'weight' => isset($settings['fields'][$k]['weight']) ? $settings['fields'][$k]['weight'] : 0,
+          'name' => $presets['subscription_plugin']['fields']['kmsubscription_saved_fields']['names'][$k],
+        );
+      }
+
+      // Sort the rows.
+      uasort($data1, 'array_uasort');
+      $field_table_data = _build_dragtable_help($data1, 'field_table', array('enabled', 'required'));
+
+      // Add the table to the form.
+      $form['field_table']['table'] = array(
+        '#theme' => 'table',
+        // The row form elements need to be processed and build,
+        // therefore pass them as element children.
+        'elements' => $field_table_data['row_elements'],
+        '#header' => array(
+          // We need two empty columns for the weigth field and the cross.
+          array('data' => NULL, 'colspan' => 2),
+          t('Enabled'),
+          t('Required'),
+          t('Name'),
+        ),
+        '#rows' => $field_table_data['rows'],
+        '#empty' => t('There are no groups available.'),
+        '#attributes' => array('id' => 'field-order'),
+      );
+      drupal_add_tabledrag('field-order', 'order', 'sibling', 'field-order-weight');
+    }
+
+    $form['km_subscription_show'] = array(
+      '#type' => 'select',
+      '#title' => t('Show / Hide Lists'),
+      '#description' => t('Select if you want to show or hide your lists to the user'),
+      '#options' => array(0 => t('Show'), 1 => t('Hide')),
+      '#default_value' => isset($settings['visibility']) ? $settings['visibility'] : 0,
+    );
+  }
+
+  return $form;
+}
+
+/**
+ * Helper function for sorting entry weights.
+ */
+function array_uasort($a, $b) {
+  if (isset($a['weight']) && isset($b['weight'])) {
+    return $a['weight'] < $b['weight'] ? -1 : 1;
+  }
+  return 0;
+}
+
+/**
+ * Implements hook_block_save().
+ */
+function kmsubscription_block_save($delta = '', $edit = array()) {
+
+  $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+
+  $presets['subscription_plugin']['block']['formatting'] = $edit['formatting'];
+  $presets['subscription_plugin']['block']['groups'] = $edit['data_table'];
+  $presets['subscription_plugin']['block']['fields'] = $edit['field_table'];
+  $presets['subscription_plugin']['block']['visibility'] = $edit['km_subscription_show'];
+
+  variable_set('kmsuite_object', json_encode($presets));
+
+}
+
+/**
+ * Custom form for the subscription block.
+ *
+ * Note: variables for this form come from both the config of the block, and also config of the module.
+ */
+function kmsubscription_block_form($form, &$form_state, $presets, $settings) {
+
+  if (count($settings['fields']) >= 1 && $settings['groups'] >= 1) {
+
+    // Sort accordingly.
+    uasort($settings['fields'], 'array_uasort');
+
+    $form['#attached']['css'] = array(
+      drupal_get_path('module', 'kmsubscription') . '/css/form.css',
+    );
+
+    $form['kmsuite_block'] = array();
+
+    foreach ($settings['fields'] as $k => $v) {
+
+      $lookup = $presets['subscription_plugin']['fields']['kmsubscription_saved_fields']['fields'][$k];
+      $key = $presets['subscription_plugin']['fields']['kmsubscription_fields'][$lookup];
+
+      if ($v['enabled'] == 1) {
+        $form['kmsuite_block']['km_custom_' . $key] = array(
+          '#type' => 'textfield',
+          '#title' => t($presets['subscription_plugin']['fields']['kmsubscription_saved_fields']['names'][$k]),
+          '#required' => $v['required'] == 1 ? TRUE : FALSE,
+        );
+      }
+    }
+
+    uasort($settings['groups'], 'array_uasort');
+    foreach ($settings['groups'] as $k => $v) {
+
+      if ($v['enabled'] == 1) {
+
+        strlen($presets['subscription_plugin']['groups'][$k]['alias']) > 3 ? $title = $presets['subscription_plugin']['groups'][$k]['alias'] : $title = $presets['subscription_plugin']['groups'][$k]['origname'];
+
+        if ($settings['visibility'] == 0) {
+          $form['kmsuite_block']['km_subscriber_list_' . $k] = array(
+            '#type' => 'checkbox',
+            '#title' => t($title),
+          );
+        }
+        else {
+          $form['kmsuite_block']['km_subscriber_list_' . $k] = array(
+            '#type' => 'hidden',
+            '#value' => $k,
+          );
+        }
+      }
+    }
+
+    $form['kmsuite_block']['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Submit'),
+      '#ajax' => array(
+        'callback' => 'kmsubscription_block_form_callback',
+        'wrapper' => 'kmsubscription-block-form',
+        'method' => 'replace',
+      ),
+    );
+
+  }
+  else {
+    $form['actions']['cancel'] = array(
+      '#markup' => t('<p>Please configure the subscription block. </p><p>You must have at least 1 group selected and 1 field selected.</p>'),
+    );
+  }
+
+  return $form;
+}
+
+/**
+ * Custom Submit Handler for the block form.
+ */
+function kmsubscription_block_form_callback($form, &$form_state) {
+
+  require_once 'listmanager/listmanager.api.inc';
+
+  $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+  $kmtoken = $presets['config']['token'];
+
+  $lm = new ListManagerMethods($kmtoken);
+
+  $errors = 1;
+  foreach ($form_state['values'] as $k => $v) {
+
+    if (stristr($k, 'km_subscriber_list_') && $v == 1) {
+      $errors = 0;
+      break;
+    }
+  }
+
+  if ($errors > 0) {
+    form_set_error('title', t('Please select at least 1 group to subscribe too.'));
+  }
+
+  if (form_get_errors()) {
+    return $form;
+  }
+
+  $groups = array();
+  $data = array();
+  $xml_str = '<Emails>';
+
+  foreach ($form_state['values'] as $k => $v) {
+    if (stristr($k, 'km_subscriber_list_') && $v != 0) {
+      $group = str_replace('km_subscriber_list_', '', $k);
+      $groups[] = $group;
+    }
+    elseif (stristr($k, 'km_custom_')) {
+
+      $field = str_replace('km_custom_', '', $k);
+      $xml_str .= '<' . $field . '>' . $v . '</' . $field . '>';
+
+      if (stristr($field, 'emailaddress')) {
+        $email = $v;
+      }
+
+      $data[$field] = $v;
+    }
+  }
+  $xml_str .= '</Emails>';
+
+  $errors = 0;
+
+  foreach ($groups as $group) {
+
+    $output = $lm->kmsuite_add_subscriber($group, 'S', 'html', $xml_str);
+
+    // After the API has been sent, record our own version in the DB.
+    kmsubscription_record_transaction($group, 'Block', 'Subscribed', $output, $email);
+
+    if (isset($output['error']) || isset($output['warning'])) {
+      $errors++;
+    }
+  }
+
+  if ($errors == 0) {
+
+    $message = 'You have successfully subscribed.';
+    $form['kmsubscription-block-form'] = $message;
+    if ($message) {
+      drupal_set_message($message, 'status');
+    }
+
+    return $form;
+  }
+  else {
+
+    $message = 'Error:  The email address was not added.';
+    $form['kmsubscription-block-form'] = $message;
+
+    if ($message) {
+      drupal_set_message($message, 'error');
+    }
+
+    return $form;
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function kmsubscription_theme($existing, $type, $theme, $path) {
+  return array(
+    'kmsubscription_list_settings_table' => array(
+      'render element' => 'form',
+    ),
+    'kmsubscription_block_settings_table' => array(
+      'render element' => 'form',
+    ),
+  );
+}
+
+/**
+ * Function to change the theme of list form as table row.
+ */
+function theme_kmsubscription_list_settings_table(&$variables) {
+  $form = $variables['form'];
+  $rows = $form['rows'];
+  $header = $form['#header'];
+
+  $content = array(
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => array(),
+  );
+
+  foreach (element_children($rows) as $row_index) {
+    $row = array();
+    foreach (element_children($rows[$row_index]) as $col_index) {
+      $row[] = drupal_render($rows[$row_index][$col_index]);
+    }
+    $content['#rows'][] = $row;
+  }
+  return drupal_render($content);
+}
+
+/**
+ * Record the KM Subsction Transation in the Database.
+ */
+function kmsubscription_record_transaction($group, $form, $action, $apiresponse, $data) {
+
+  $kid = db_insert('kmsubscription_data')
+  ->fields(array(
+  'group_id' => $group,
+  'created' => REQUEST_TIME,
+  'form' => $form,
+  'email' => $data,
+  'action' => $action,
+  'apiresponse' => $apiresponse,
+  ))
+  ->execute();
+
+}
+
+/**
+ * Help function for draggable table.
+ * 
+ * @param array  $data
+ *   data table
+ * @param string $type
+ *   data type
+ * @param string $data_list
+ *   list fields property
+ *   
+ * @return array
+ *   build table
+ */
+function _build_dragtable_help($data, $type, $data_list) {
+
+  $rows = array();
+  $row_elements = array();
+
+  $total = array();
+
+  if ($type == 'data_table') {
+
+    $class_weight = 'entry-order-weight';
+
+  }
+  else {
+
+    $class_weight = 'field-order-weight';
+
+  }
+
+  foreach ($data as $id => $entry) {
+
+    $rows[$id]['data'][] = array('class' => array('entry-cross'));
+    $rows[$id]['data'][] = array(
+      'data' => array(
+        '#type' => 'weight',
+        '#title' => t('Weight'),
+        '#title_display' => 'invisible',
+        '#default_value' => $entry['weight'],
+        '#parents' => array($type, $id, 'weight'),
+        '#attributes' => array(
+          'class' => array($class_weight),
+        ),
+      ));
+
+    foreach ($data_list as $k => $v) {
+
+      $rows[$id]['data'][] = array(
+        'data' => array(
+          'data' => array(
+            '#type' => 'checkbox',
+            '#title' => $v,
+            '#title_display' => 'invisible',
+            '#default_value' => $entry[$v],
+            '#parents' => array($type, $id, $v),
+          )));
+    }
+
+    if ($type == 'data_table') {
+
+      $rows[$id]['data'][] = check_plain($entry['name']);
+      $rows[$id]['data'][] = check_plain($entry['alias']);
+
+      $row_elements[$id] = array(
+        'weight' => &$rows[$id]['data'][1]['data'],
+        'enabled' => &$rows[$id]['data'][2]['data'],
+      );
+
+    }
+    else {
+
+      $rows[$id]['data'][] = check_plain($entry['name']);
+      $row_elements[$id] = array(
+        'weight' => &$rows[$id]['data'][1]['data'],
+        'enabled' => &$rows[$id]['data'][2]['data'],
+        'required' => &$rows[$id]['data'][3]['data'],
+      );
+    }
+
+    $rows[$id]['class'] = array('draggable');
+  }
+
+  $total['rows'] = $rows;
+  $total['row_elements'] = $row_elements;
+
+  return $total;
+}

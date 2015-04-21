@@ -1,0 +1,328 @@
+<?php
+
+/**
+ * @file
+ * Knowledge Marketing Overlay Module File.
+ *
+ * NOTE:  The KMSUITE_KM_MENU_PATH is inherited from the suite.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function kmoverlay_menu() {
+
+  $items = array();
+
+  $items[KMSUITE_KM_MENU_PATH . '/overlay'] = array(
+    'title' => 'Overlay',
+    'description' => 'Overlay Management',
+    'access arguments' => array('administer users'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 1,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmsuite_overlay_settings'),
+    'access arguments' => array('access content'),
+    'file' => 'kmoverlay_config.inc',
+  );
+
+  $items['overlay/%ctools_js/add'] = array(
+    'page callback' => 'kmoverlay_form_callback',
+    'page arguments' => array(1),
+    'access arguments' => TRUE,
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function kmoverlay_theme($existing, $type, $theme, $path) {
+  return array(
+    'kmoverlay_block_settings_table' => array(
+      'render element' => 'form',
+    ),
+  );
+}
+
+/**
+ * Function to change the theme of block form as table row.
+ */
+function theme_kmoverlay_block_settings_table(&$vars) {
+  $element = $vars['form']['fieldrows'];
+
+  $header = array(
+    'field' => t('Fields'),
+    'weight' => t('Weight'),
+    'use_field' => t('Use Field'),
+    'mandatory' => t('Mandatory'),
+  );
+
+  $rows = array();
+  foreach (element_children($element) as $key) {
+    $row = array();
+    $row['data'] = array();
+    foreach ($header as $fieldname => $title) {
+      $row['data'][] = drupal_render($element[$key][$fieldname]);
+      $row['class'] = array('draggable');
+    }
+    $rows[] = $row;
+  }
+
+  $output = theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'attributes' => array('id' => 'field_table'),
+  ));
+
+  drupal_add_tabledrag('field_table', 'order', 'sibling', 'row-weight');
+
+  return $output;
+}
+
+/**
+ * Overlay form callback.
+ */
+function kmoverlay_form_callback($js = FALSE) {
+
+  $output = NULL;
+  $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+  if ($js) {
+
+    $form_state = array(
+      'ajax' => TRUE,
+      'title' => t($presets['overlay_plugin']['title']),
+    );
+
+    $output = ctools_modal_form_wrapper('kmoverlay_popup_form', $form_state);
+    if (!empty($form_state['ajax_commands'])) {
+      $output[] = $form_state['ajax_commands'];
+    }
+
+    print ajax_render($output);
+    drupal_exit();
+
+  }
+
+  return $output;
+}
+
+/**
+ * Overlay Subscription form.
+ *
+ * Dynamically build the form based upon saved elements in the overlay config.
+ * Note: The form elements (UDFs) come from the Group Management plugin.
+ */
+function kmoverlay_popup_form($form, &$form_state) {
+
+  $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+
+  $form['#attached']['css'] = array(
+    drupal_get_path('module', 'kmoverlay') . '/css/overlay.css',
+  );
+
+  $form['copy'] = array(
+    '#markup' => '<div class="overlay_copy">' . $presets['overlay_plugin']['copy_config']['copy']['value'] . '</div>',
+  );
+
+ // Sort accordingly.
+  uasort($presets['overlay_plugin']['field_table'], 'array_uasort');
+  foreach ($presets['overlay_plugin']['field_table'] as $k => $v) {
+//echo "<pre>"; print_r($v); die();
+    $lookup = $presets['subscription_plugin']['fields']['kmsubscription_saved_fields']['fields'][$k];
+    $key = $presets['subscription_plugin']['fields']['kmsubscription_fields'][$lookup];
+
+    if ($v['enabled'] == 1) {
+      $form['km_custom_' . $key] = array(
+        '#type' => 'textfield',
+        '#title' => t($presets['subscription_plugin']['fields']['kmsubscription_saved_fields']['names'][$k]),
+        '#required' => $v['required'] == 1 ? TRUE : FALSE,
+      );
+    }
+  }
+
+  $form['sgc_overlay']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Submit',
+  );
+
+  return $form;
+}
+
+/**
+ * Form Submit.
+ */
+function kmoverlay_popup_form_submit($form, &$form_state) {
+
+  $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+
+  //$lib = libraries_get_path('kmsuite') . '/';
+  //require_once($lib . 'class.ecnlistmanager.php');
+
+  require_once drupal_get_path('module', 'kmsubscription') . '/listmanager/listmanager.api.inc';
+
+  $values = $form_state['values'];
+
+  unset($values['submit']);
+  unset($values['form_build_id']);
+  unset($values['form_token']);
+  unset($values['form_id']);
+  unset($values['op']);
+
+  $kmtoken = $presets['config']['token'];
+
+  $lm = new ListManagerMethods($kmtoken);
+
+  $groups = array();
+  $data = array();
+  $email = NULL;
+  $xml_str = '<Emails>';
+
+  // We displayed the lists for selection.
+  foreach ($form_state['values'] as $k => $v) {
+    if (stristr($k, 'km_custom_')) {
+
+      $field = str_replace('km_custom_', '', $k);
+      if (stristr($field, 'emailaddress')) {
+        $email = $v;
+      }
+
+      $xml_str .= '<' . $field . '>' . $v . '</' . $field . '>';
+
+      $data[$field] = $v;
+    }
+  }
+  $xml_str .= '</Emails>';
+
+  $errors = 0;
+  foreach ($presets['overlay_plugin']['overlay_groups'] as $group) {
+
+    $output = $lm->kmsuite_add_subscriber($group, 'S', 'html', $xml_str);
+
+    // After the API has been sent, record our own version in the DB.
+    kmsubscription_record_transaction($group, 'Overlay', 'Subscribed', $email, $data);
+
+    if ($res->ErrorCode != 0) {
+      $errors++;
+    }
+  }
+
+  setcookie("SESSkmuserclosed", 1, time() + 24 * 60 * $presets['overlay_plugin']['cookie_interval'], '/');
+
+  //setcookie("SESSkmuserclosed", 1, $presets['overlay_plugin']['cookie_interval'] * 86400);
+
+  $commands = array();
+  //$commands[] = ctools_modal_command_display(t($presets['overlay_plugin']['title']), $presets['overlay_plugin']['message']);
+  drupal_set_message(t('Success!'), 'status', FALSE);
+  $commands[] = ajax_command_remove('#modalContent #modal-content form');
+  $commands[] = ajax_command_remove('#modalContent #modal-content .error');
+  $commands[] = ajax_command_prepend('#modalContent #modal-content', '<div id="messages">' . theme('status_messages') . '</div>');
+  $commands[] = ajax_command_append('#modalContent #modal-content', '<div class="message">' . $presets['overlay_plugin']['message'] . '</div>');
+
+  if ($presets['overlay_plugin']['redirect_status'] == 1) {
+    $commands[] = ctools_ajax_command_redirect('subscription-management', $delay = 1500, array('query'=>array('email' => base64_encode($email))));
+  }
+
+  print ajax_render($commands);
+  exit;
+
+}
+
+/**
+ * Implements page_alter to add the overlay link in page().
+ */
+function kmoverlay_page_alter(&$page) {
+
+  $output = ctools_modal_text_button(t('Overlay Init'), 'overlay/nojs/add', t('Overlay Init'), 'ctools-modal-ctools-overlay-style');
+  $page['page_bottom']['overlay_popup'] = array(
+    '#type' => 'markup',
+    '#markup' => '<div>' . $output . '</div>',
+  );
+}
+
+/**
+ * Implements hook_init().
+ */
+function kmoverlay_init() {
+
+  $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+  /* echo "<Pre>"; print_r($presets); die(); */
+  $path = drupal_get_path('module', 'kmoverlay');
+
+  ctools_include('ajax');
+  ctools_include('modal');
+  ctools_modal_add_js();
+  $sample_style = array(
+    'ctools-overlay-style' => array(
+      'modalSize' => array(
+        'type' => 'fixed',
+        //'width' => (int) $presets['overlay_plugin']['width'],
+        'width' => '100%',
+        //'height' => (int) $presets['overlay_plugin']['height'],
+        'height' => '100%',
+        'contentRight' => 0,
+        'contentBottom' => 0,
+      ),
+      'modalOptions' => array(
+        'opacity' => .5,
+        'background-color' => '#000',
+        'z-index' => 9999999,
+      ),
+      'animation' => 'fadeIn',
+      'modalTheme' => 'CToolsOverlayModal',
+      'closeImage' => theme('image', array(
+        'path' => $path . '/images/close_icon.png',
+        'alt' => t('Close'),
+        'title' => t('Close'),
+      )),
+      'throbber' => theme('image', array(
+        'path' => $path . '/images/ajax-loader.gif',
+        'alt' => t('Loading...'),
+        'title' => t('Loading'),
+      )),
+    ),
+  );
+  drupal_add_js($sample_style, 'setting');
+
+  // Overlay Javascript.  Note: conditional parameters coming from kmoverlay_is_allowed();
+  if(isset($presets['overlay_plugin'])) {
+    $settings = kmoverlay_is_allowed();
+  
+    drupal_add_js(array('kmoverlay' => $settings), 'setting');
+    drupal_add_js($path . '/js/ctools-ajax-overlay.js');
+    drupal_add_js($path . '/js/jquery.cookie.js');
+    // Overlay stylesheet.
+    drupal_add_css($path . '/css/ctools-ajax-overlay.css');
+    drupal_add_css($path . '/css/overlay.css');
+  } else {
+    drupal_set_message("No Overlay settings", 'error', FALSE);
+  }
+  
+}
+
+/**
+ * KMOverlay is allowed function.
+ */
+function kmoverlay_is_allowed() {
+
+  global $user;
+  $presets = json_decode(variable_get('kmsuite_object'), TRUE);
+
+  $path = isset($_GET['q']) ? $_GET['q'] : '';
+  $allowed = drupal_match_path($path, $presets['overlay_plugin']['excluded_pages']);
+
+  $data = array(
+    'path' => (int) $allowed, /* 1 == NO, 0 == YES */
+    'status' => (int) $presets['overlay_plugin']['status'],
+    'developer' => (int) $presets['overlay_plugin']['developer_options'],
+    'delay' => (int) $presets['overlay_plugin']['page_delay'],
+    'interval' => (int) $presets['overlay_plugin']['cookie_interval'],
+    'uid' => (int) $user->uid,
+    'pester' => (int) $presets['overlay_plugin']['pester'],
+    'pagectr' => @$_COOKIE['SESSkmpagectr'] ? @$_COOKIE['SESSkmpagectr'] : 0,
+  );
+
+  return $data;
+}
