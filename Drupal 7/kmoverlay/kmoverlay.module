@@ -209,7 +209,13 @@ function kmoverlay_popup_form_submit($form, &$form_state) {
     }
   }
 
+  // Close the overlay -- Note:  Do we need this?
   setcookie("SESSkmuserclosed", 1, time() + 24 * 60 * $presets['overlay_plugin']['cookie_interval'], '/');
+
+  // Important:  Declare the cookie with email.  This is tracking the user now, and telling
+  // us we don't need to give them the popup anymore.
+  // NOTE:  setrawcookie to keep the email raw, not encoded.
+  setrawcookie("ECNEmailAddress", $email, time() + 24 * 60 * 60 * 365, '/');
 
   //setcookie("SESSkmuserclosed", 1, $presets['overlay_plugin']['cookie_interval'] * 86400);
 
@@ -289,7 +295,7 @@ function kmoverlay_init() {
   // Overlay Javascript.  Note: conditional parameters coming from kmoverlay_is_allowed();
   if(isset($presets['overlay_plugin'])) {
     $settings = kmoverlay_is_allowed();
-  
+
     drupal_add_js(array('kmoverlay' => $settings), 'setting');
     drupal_add_js($path . '/js/ctools-ajax-overlay.js');
     drupal_add_js($path . '/js/jquery.cookie.js');
@@ -299,7 +305,7 @@ function kmoverlay_init() {
   } else {
     drupal_set_message("No Overlay settings", 'error', FALSE);
   }
-  
+
 }
 
 /**
