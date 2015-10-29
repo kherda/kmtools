@@ -39,7 +39,7 @@ function kmsuite_page_build() {
 
     drupal_add_js('
       var TrackerKey = "' . $presets['domain_tracker']['key'] . '";
-      var url = "http://webservices.ecn5.com/ECN_tracker.js";
+      var url = "//webservices.ecn5.com/ECN_tracker.js";
       var script = document.createElement("script");
       script.setAttribute("src", url);
       script.setAttribute("type", "text/javascript");

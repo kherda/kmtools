@@ -26,7 +26,7 @@ function kmsubscription_menu() {
   );
 
   $items[KMSUITE_KM_MENU_PATH . '/page'] = array(
-    'title' => 'KM Page Settings',
+    'title' => 'Subscription Page Settings',
     'description' => 'Page Setting.',
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
@@ -722,14 +722,14 @@ function kmsubscription_record_transaction($group, $form, $action, $apiresponse,
 
 /**
  * Help function for draggable table.
- * 
+ *
  * @param array  $data
  *   data table
  * @param string $type
  *   data type
  * @param string $data_list
  *   list fields property
- *   
+ *
  * @return array
  *   build table
  */

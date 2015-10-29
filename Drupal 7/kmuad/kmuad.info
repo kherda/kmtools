@@ -1,0 +1,10 @@
+name = KM Subscription UAD
+description = "UAD Token with the Knowledge Marketing Suite."
+core = 7.x
+package = Knowledge Marketing
+dependencies[] = kmsuite
+dependencies[] = kmsubscription
+dependencies[] = token
+dependencies[] = ctools
+
+configure = admin/config/services/knowledge-marketing/uad

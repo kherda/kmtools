@@ -1,0 +1,301 @@
+<?php
+
+/**
+ * @file
+ * Knowledge Marketing UAD Module File.
+ *
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function kmuad_menu() {
+
+  $items = array();
+
+  $items[KMSUITE_KM_MENU_PATH . '/uad'] = array(
+    'title' => 'UAD',
+    'description' => 'KM UAD Field Management',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmuad_settings'),
+    'access arguments' => array('access content'),
+    'file' => 'kmuad_config.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  $items[KMSUITE_KM_MENU_PATH . '/uad/settings'] = array(
+    'title' => 'UAD Configuration',
+    'description' => 'KM UAD Field Management',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmuad_settings'),
+    'access arguments' => array('access content'),
+    'file' => 'kmuad_config.inc',
+    'type' => MENU_LOCAL_TASK | MENU_DEFAULT_LOCAL_TASK,
+  );
+
+  $items[KMSUITE_KM_MENU_PATH . '/uad/fields'] = array(
+    'title' => 'UAD Token Definition',
+    'description' => 'KM UAD Field Management',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('kmuad_field_settings'),
+    //'page arguments' => array('kmuad_uad_fields'),
+    'access arguments' => array('access content'),
+    'file' => 'kmuad_config_field.inc',
+    'weight' => 10,
+    'type' => MENU_LOCAL_TASK | MENU_NORMAL_ITEM,
+  );
+
+  $items['uad-test'] = array(
+    'title' => 'UAD Test',
+    'page callback' => 'kmuad_test',
+    'access arguments' => array('access content'),
+  );
+
+  return $items;
+}
+
+function kmuad_test() {
+
+  $output = '<p>Test page which will show you the seleted demographics for the ECNEmailAddress that is currently cookied on this computer.  If you want to run this code in your module to pass this data to an advertising service, you can easily get the demopgrahics from the cookie itself, or run this function:</p> <pre>kmuad_demographics_query()</pre>';
+  $output .= kmuad_demographics_query();
+
+
+  return $output;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function kmuad_theme($existing, $type, $theme, $path) {
+  return array(
+    'kmuad_list_settings_table' => array(
+      'render element' => 'form',
+    ),
+  );
+}
+
+/**
+ * Function to change the theme of list form as table row.
+ */
+function theme_kmuad_list_settings_table(&$variables) {
+  $form = $variables['form'];
+  $rows = $form['rows'];
+  $header = $form['#header'];
+
+  $content = array(
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => array(),
+  );
+
+  foreach (element_children($rows) as $row_index) {
+    $row = array();
+    foreach (element_children($rows[$row_index]) as $col_index) {
+      $row[] = drupal_render($rows[$row_index][$col_index]);
+    }
+    $content['#rows'][] = $row;
+  }
+  return drupal_render($content);
+}
+
+
+/**
+ * Implements hook_token_info().
+ */
+function kmuad_token_info() {
+
+  if (isset($_COOKIE['ECNDemographics'])) {
+
+    $demographics = json_decode($_COOKIE['ECNDemographics'], TRUE);
+
+    $type = array(
+      'name' => t('KM Demographics'),
+      'description' => t('Tokens related to KM Subscription Demographics.'),
+    );
+
+    foreach ($demographics as $dkey => $dvalue) {
+
+      $key = str_replace(" ", "-", strtolower($dkey));
+
+      if ($key != 'pubcode') {
+        $km_demographics[$key] = array(
+          'name' => $dkey,
+          'description' => 'KM Demographics: ' . $dkey,
+        );
+      }
+
+    }
+
+    return array(
+      'types' => array('kmdemographics' => $type),
+      'tokens' => array('kmdemographics' => $km_demographics),
+    );
+  }
+
+}
+
+/**
+ * Implements hook_tokens().
+ *
+ * @param string $type
+ *   token types
+ * @param array $tokens
+ *   tokens array
+ * @param array $data
+ *   token data
+ * @param array $options
+ *   options
+ *
+ * @return array
+ *   token
+ */
+function kmuad_tokens($type, $tokens, array $data = array(), array $options = array()) {
+
+  if (isset($_COOKIE['ECNDemographics'])) {
+
+    $demographics = json_decode($_COOKIE['ECNDemographics'], TRUE);
+    $replacements = array();
+
+    if ($type == 'kmdemographics') {
+
+      foreach ($tokens as $name => $original) {
+        $name = str_replace("-", " ", strtoupper($name));
+        $replacements[$original] = $demographics[$name];
+      }
+    }
+
+    return $replacements;
+  }
+}
+
+/**
+ * Implementing hook_form_alter.
+ * @param  [type] &$form      [description]
+ * @param  [type] $form_state [description]
+ * @param  [type] $form_id    [description]
+ * @return [type]             [description]
+ */
+
+/**
+ * Implementing hook_init.
+ * @return [type]
+ *   [description]
+ */
+function kmuad_init() {
+
+  $presets = json_decode(variable_get('kmuad_object'), TRUE);
+
+  if (empty($presets['uad']['key'])) {
+    //drupal_set_message("Please configured the UAD Key", 'error', FALSE);
+    //return;
+  }
+
+  if (isset($_COOKIE['ECNEmailAddress']) && !empty($_COOKIE['ECNEmailAddress'])) {
+    $email = $_COOKIE['ECNEmailAddress'];
+  }
+
+  if (!empty($presets['uad']['key']) && (isset($email) && !empty($email))) {
+
+    if (!isset($_COOKIE['ECNDemographics'])) {
+      get_demographics($email);
+    }
+  }
+  else {
+    //drupal_set_message("ECNEmailAddress not set, please check configuration", 'error', FALSE);
+  }
+
+}
+
+/**
+ * Implements demographocis.
+ *
+ * @param string $email
+ *   [description]
+ *
+ * @return [type]
+ *   [description]
+ */
+function get_demographics($email) {
+
+  $presets = json_decode(variable_get('kmuad_object'), TRUE);
+
+  $lib = libraries_get_path('kmsuite') . '/';
+  require_once $lib . 'class.uad.php';
+
+  $uad = new UADManager($presets['uad']['key']);
+
+  $obj = $uad->GetSubscriber($email);
+  if (isset($obj) && is_object($obj)) {
+
+    if ($obj->Message == 'Success' && count($obj->Result) > 0) {
+
+      if (count($obj->Result[0]->SubscriberConsensusDemographics) > 1) {
+
+        $demographics = $obj->Result[0]->SubscriberConsensusDemographics;
+        $demographics_arr = array('email' => $email);
+
+        foreach ($demographics as $dkey => $dvalue) {
+          if ($dvalue->Name == 'PUBCODE') {
+            continue;
+          }
+          else {
+            $demographics_arr[$dvalue->Name] = $dvalue->Value;
+          }
+        }
+
+        setrawcookie('ECNDemographics', rawurlencode(json_encode($demographics_arr)), REQUEST_TIME + (86400 * 14), '/');
+      }
+    }
+    else {
+      drupal_set_message("ECNEmailAddress cookie is not set, please set a Test Email ", 'error', FALSE);
+    }
+  }
+  else {
+    drupal_set_message("Wrong Key. Please check the UAD Key", 'error', FALSE);
+  }
+
+}
+
+/**
+ * Grab all demographics.
+ *
+ * Note:  Pass in specific demographics as a param in the future? Either that, or parse the cookie for what you want.
+ *
+ * @return [type]
+ *   [description]
+ */
+function kmuad_demographics_query() {
+
+  $presets = json_decode(variable_get('kmuad_object'), TRUE);
+  $saved_tokens = isset($presets['uad']['fields']['kmuad_saved_fields']['uad_token']) ? $presets['uad']['fields']['kmuad_saved_fields']['uad_token'] : '';
+  $taxo_array = array();
+
+  if (isset($saved_tokens) && !empty($saved_tokens) && count($saved_tokens) > 0) {
+
+    $saved_tokens = array_filter($saved_tokens);
+
+    foreach ($saved_tokens as $ktoken => $vtoken) {
+
+      preg_match("/kmdemographics:(.*)]/", $vtoken, $matches);
+
+      $taxokey = str_replace("-", "_", $matches[1]);
+      $taxoval = token_replace($vtoken);
+
+      if (!empty($taxoval)) {
+        $taxo_array[$taxokey] = $taxoval;
+      }
+    }
+
+    if (count($taxo_array) == 0) {
+      $taxo_str = "No Results";
+    }
+    else {
+      $taxo_str = urldecode(http_build_query($taxo_array, '', '&'));
+    }
+  }
+  else {
+    $taxo_str = "No Tokens Set";
+  }
+
+  return $taxo_str;
+}

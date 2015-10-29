@@ -15,7 +15,7 @@ require_once 'listmanager/listmanager.api.inc';
 function kmsuite_group_settings($form, $form_state) {
 
   $form['description'] = array(
-    '#markup' => '<div>' . t('Group Management:  The Group Management configurations determine detailed information for each group you elect to have working in your website.  Note:  API Counts are caches for 24 hours to avoid slow page loads..</a>', array('!suite' => url('google.com'), '!kmcontact' => url('google.com'))) . '</div>',
+    '#markup' => '<div>' . t('', array('!suite' => url('google.com'), '!kmcontact' => url('google.com'))) . '</div>',
   );
 
   $presets = json_decode(variable_get('kmsuite_object'), TRUE);
@@ -27,7 +27,7 @@ function kmsuite_group_settings($form, $form_state) {
   $form['km_group_details'] = array(
     '#type' => 'fieldset',
     '#title' => t('Step 2: Group Configuration'),
-    '#description' => t('You can configure each group to have custom fields\'s available.  Note:  When adding multiple lists to the subscription blocks later on, if a fields is not available, the field will not pass along the data.'),
+    '#description' => t('Each of the groups you have selected in step 1 will be available for use below.  The primary use of the fieldsets is to add an alias to the group name, description and frequency.'),
     '#collapsible' => TRUE,
     '#collapsed' => isset($presets['subscription_plugin']['groups']) ? FALSE : TRUE,
   );
@@ -241,7 +241,7 @@ function kmsuite_group_selection($form, $form_state) {
   $form['km_group_selection'] = array(
     '#type' => 'fieldset',
     '#title' => t('Step 1: Group Selection'),
-    '#description' => t('Select the available lists you would like your website to have access too.  We realize you may have older groups, or groups belonging to alternate sites, you in this section you determine which groups you would like available.  NOTE:  You have to select a list and hit save before it shows as an option below.'),
+    '#description' => t('Below you should find all groups associated with your ECN account (determined from your token).  <br />Select the group(s) you would like to use throughout the website.  You can configure a friendly alias after the group selection. <br /><br /><i>Note: after selecting the group, please go to Step 2, in the tabs.</i>'),
     '#collapsible' => TRUE,
     '#collapsed' => (isset($presets['subscription_plugin']['groups']) && count($presets['subscription_plugin']['groups']) > 0) ? FALSE : TRUE,
   );

@@ -1,0 +1,28 @@
+<?php
+
+/**
+ * @file
+ * Knowledge Marketing Subscription Install.
+ */
+
+/**
+ * Implements of hook_schema().
+ */
+
+/**
+ * Implements hook_install().
+ */
+function kmuad_install() {
+
+
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function kmuad_uninstall() {
+
+  $presets = json_decode(variable_get('kmuad_object'), TRUE);
+  unset($presets['uad']);
+  variable_set('kmuad_object', json_encode($presets));
+}

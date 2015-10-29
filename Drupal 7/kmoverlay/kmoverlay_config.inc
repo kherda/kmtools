@@ -10,9 +10,7 @@
 function kmsuite_overlay_settings($form, $form_state) {
 
   $presets = json_decode(variable_get('kmsuite_object'), TRUE);
-  
   //echo "<Pre>"; print_r($presets); die();
-  
 
   $cookie_period = array(
     1 => t('1 Day'),
@@ -132,11 +130,11 @@ function kmsuite_overlay_settings($form, $form_state) {
     foreach ($presets['subscription_plugin']['fields']['kmsubscription_saved_fields']['fields'] as $k => $v) {
 
       $data[$k] = array(
-          'enable' => isset($presets['overlay_plugin']['field_table'][$k]['enabled']) ? $presets['overlay_plugin']['field_table'][$k]['enabled'] : FALSE,
-          'required' => isset($presets['overlay_plugin']['field_table'][$k]['required']) ? $presets['overlay_plugin']['field_table'][$k]['required'] : FALSE,
-          'weight' => isset($presets['overlay_plugin']['field_table'][$k]['weight']) ? $presets['overlay_plugin']['field_table'][$k]['weight'] : 0,
-          'name' => $presets['subscription_plugin']['fields']['kmsubscription_saved_fields']['names'][$k],
-        );
+        'enable' => isset($presets['overlay_plugin']['field_table'][$k]['enabled']) ? $presets['overlay_plugin']['field_table'][$k]['enabled'] : FALSE,
+        'required' => isset($presets['overlay_plugin']['field_table'][$k]['required']) ? $presets['overlay_plugin']['field_table'][$k]['required'] : FALSE,
+        'weight' => isset($presets['overlay_plugin']['field_table'][$k]['weight']) ? $presets['overlay_plugin']['field_table'][$k]['weight'] : 0,
+        'name' => $presets['subscription_plugin']['fields']['kmsubscription_saved_fields']['names'][$k],
+      );
     }
 
     // Sort the rows.

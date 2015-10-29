@@ -127,10 +127,10 @@ function kmoverlay_popup_form($form, &$form_state) {
     '#markup' => '<div class="overlay_copy">' . $presets['overlay_plugin']['copy_config']['copy']['value'] . '</div>',
   );
 
- // Sort accordingly.
+  // Sort accordingly.
   uasort($presets['overlay_plugin']['field_table'], 'array_uasort');
   foreach ($presets['overlay_plugin']['field_table'] as $k => $v) {
-//echo "<pre>"; print_r($v); die();
+    //echo "<pre>"; print_r($v); die();
     $lookup = $presets['subscription_plugin']['fields']['kmsubscription_saved_fields']['fields'][$k];
     $key = $presets['subscription_plugin']['fields']['kmsubscription_fields'][$lookup];
 
@@ -228,12 +228,11 @@ function kmoverlay_popup_form_submit($form, &$form_state) {
   $commands[] = ajax_command_append('#modalContent #modal-content', '<div class="message">' . $presets['overlay_plugin']['message'] . '</div>');
 
   if ($presets['overlay_plugin']['redirect_status'] == 1) {
-    $commands[] = ctools_ajax_command_redirect('subscription-management', $delay = 1500, array('query'=>array('email' => base64_encode($email))));
+    $commands[] = ctools_ajax_command_redirect('subscription-management', $delay = 1500, array('query' => array('email' => base64_encode($email))));
   }
 
   print ajax_render($commands);
   exit;
-
 }
 
 /**
@@ -302,7 +301,8 @@ function kmoverlay_init() {
     // Overlay stylesheet.
     drupal_add_css($path . '/css/ctools-ajax-overlay.css');
     drupal_add_css($path . '/css/overlay.css');
-  } else {
+  }
+  else {
     drupal_set_message("No Overlay settings", 'error', FALSE);
   }
 

@@ -13,7 +13,7 @@
 function kmsuite_group_settings_page($form, $form_state) {
 
   $form['description'] = array(
-    '#markup' => '<div>' . t('Group Management:  The Group Management configurations determine detailed information for each group you elect to have working in your website.  Note:  API Counts are caches for 24 hours to avoid slow page loads..</a>', array('!suite' => url('google.com'), '!kmcontact' => url('google.com'))) . '</div>',
+    '#markup' => '<div>' . t('Subscription Management Page Settings:  Below you will find various settings for the subscription management page.  You must have at least 1 field set from the Group Management -> fields settings, and also at least 1 group available.') . '</div>',
   );
 
   $presets = json_decode(variable_get('kmsuite_object'), TRUE);
@@ -162,7 +162,7 @@ function kmsuite_group_settings_page($form, $form_state) {
 
   }
   else {
-    drupal_set_message(t('Error:  Either Subscription List does not set or you do not have a proper token configured.'), 'error');
+    drupal_set_message(t('Error:  No lists selected, or the token is invalid.'), 'error');
   }
 
   return $form;
