@@ -14,7 +14,7 @@ The KM Tools open source code is meant for those looking to link their website w
 
   NOTE:  When adding fields, you have the option to add custom UDF's (user defined fields).  If you choose to add this, you will have to make sure the field you have created is created for the group in the ECN.  Creating the field in the website will not tie it to groups in the ECN (as we cannot add 1 to many, nor would we want too).
 
-    - RERPOTING:  During the installation of the KMSUBSCRIBTION module, a table in the database will be created that will allow us to track who has subscribed in the website. Each plugin details a different location of where someone signed up (overlay, page, block, etc).  You can run simple reporting by visiting this page (admin/reports/kmsubscription)
+    - REPORTING:  During the installation of the KMSUBSCRIPTION module, a table in the database will be created that will allow us to track who has subscribed in the website. Each plugin details a different location of where someone signed up (overlay, page, block, etc).  You can run simple reporting by visiting this page (admin/reports/kmsubscription)
 
   - KMOVERLAY:  This additional module allows you to display a form in an overlay in Drupal 7 (using ctools).  This form is customizable, and allows additional administration options (such as redirecting the user after a sucessful entry).
 
